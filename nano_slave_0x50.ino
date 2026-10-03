@@ -2,6 +2,7 @@
  * Arduino Nano I2C Slave (Address 0x50)
  * Receives single 8-bit messages from PIC16F18156 host
  * Drives 2004A LCD display (20x4 parallel interface)
+ * Displays splash screen on startup for 10 seconds
  * 
  * I2C Connections:
  * - SDA: A4 (Analog pin 4)
@@ -55,6 +56,9 @@
 #define INPUT2 11
 #define INPUT3 A6
 
+// Splash screen duration (milliseconds)
+#define SPLASH_SCREEN_DURATION 10000
+
 // Create LCD object (RS, E, D4, D5, D6, D7)
 LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
 
@@ -93,14 +97,8 @@ void setup() {
     // Initialize LCD (20 columns, 4 rows)
     lcd.begin(20, 4);
     
-    // Clear LCD and display startup message
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Slave 0x50");
-    lcd.setCursor(0, 1);
-    lcd.print("Waiting for Host...");
-    delay(1000);
-    lcd.clear();
+    // Display splash screen for 10 seconds
+    displaySplashScreen();
     
     // Initialize I2C as Slave
     Wire.begin(SLAVE_ADDRESS);
@@ -111,6 +109,43 @@ void setup() {
     
     Serial.println("I2C Slave initialized at address 0x50");
     Serial.println("LCD initialized - 20x4 display ready");
+}
+
+// ============================================================================
+// SPLASH SCREEN DISPLAY
+// ============================================================================
+
+void displaySplashScreen() {
+    unsigned long splash_start_time = millis();
+    unsigned long splash_elapsed_time = 0;
+    
+    // Clear LCD and display splash screen
+    lcd.clear();
+    
+    lcd.setCursor(0, 0);
+    lcd.print("  PIC I2C System  ");
+    
+    lcd.setCursor(0, 1);
+    lcd.print("    Slave 0x50    ");
+    
+    lcd.setCursor(0, 2);
+    lcd.print("   2004A LCD      ");
+    
+    lcd.setCursor(0, 3);
+    lcd.print(" Initializing...  ");
+    
+    // Display splash screen for 10 seconds
+    while (splash_elapsed_time < SPLASH_SCREEN_DURATION) {
+        splash_elapsed_time = millis() - splash_start_time;
+        delay(100);  // Update display every 100ms for responsiveness
+    }
+    
+    // Clear LCD after splash screen
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Ready");
+    delay(500);
+    lcd.clear();
 }
 
 // ============================================================================

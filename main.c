@@ -1,7 +1,7 @@
 /*
- * PIC16F18156 I2C Host Controller
+ * PIC16F18156 I2C Host Controller (Send Only)
  * Communicates with two Arduino Nano slaves via I2C
- * 7-bit addressing, single 8-bit messages
+ * 7-bit addressing, single 8-bit messages (host send only)
  * 
  * I2C Configuration:
  * - SCL: RA0 (Clock)
@@ -77,9 +77,7 @@ void ioInit(void);
 void i2cStart(void);
 void i2cStop(void);
 void i2cWrite(uint8_t data);
-uint8_t i2cRead(uint8_t ack);
 void i2cSendByte(uint8_t slave_addr, uint8_t data);
-uint8_t i2cReceiveByte(uint8_t slave_addr);
 void delay_ms(uint16_t ms);
 
 // Input handler subroutines
@@ -177,30 +175,12 @@ void i2cWrite(uint8_t data) {
     while (SSP1CON2bits.ACKSTAT);  // Wait for ACK from slave
 }
 
-uint8_t i2cRead(uint8_t ack) {
-    uint8_t data;
-    
-    SSP1CON2bits.RCEN = 1;  // Enable receive mode
-    while (SSP1STATbits.BF == 0);  // Wait for buffer to fill
-    data = SSP1BUF;  // Read data from buffer
-    
-    if (ack) {
-        SSP1CON2bits.ACKDT = 0;  // Send ACK
-    } else {
-        SSP1CON2bits.ACKDT = 1;  // Send NACK
-    }
-    SSP1CON2bits.ACKEN = 1;  // Initiate ACK/NACK sequence
-    while (SSP1CON2bits.ACKEN);  // Wait for ACK/NACK to complete
-    
-    return data;
-}
-
 // ============================================================================
 // I2C HIGH-LEVEL OPERATIONS
 // ============================================================================
 
 /*
- * Send a single byte to specified I2C slave
+ * Send a single byte to specified I2C slave (Host sends, slave receives only)
  * slave_addr: 7-bit address of slave device
  * data: 8-bit data to send
  */
@@ -214,27 +194,6 @@ void i2cSendByte(uint8_t slave_addr, uint8_t data) {
     i2cWrite(data);
     
     i2cStop();
-}
-
-/*
- * Receive a single byte from specified I2C slave
- * slave_addr: 7-bit address of slave device
- * Returns: 8-bit data received from slave
- */
-uint8_t i2cReceiveByte(uint8_t slave_addr) {
-    uint8_t data;
-    
-    i2cStart();
-    
-    // Send slave address with read bit (LSB = 1)
-    i2cWrite((slave_addr << 1) | 0x01);
-    
-    // Read data byte (NACK = 0 means send ACK after read)
-    data = i2cRead(0);
-    
-    i2cStop();
-    
-    return data;
 }
 
 // ============================================================================
@@ -367,8 +326,7 @@ void setAllOutputs(uint8_t state) {
 
 void main(void) {
     uint8_t input_state;
-    uint8_t slave1_data;
-    uint8_t slave2_data;
+    uint8_t message_data;
     
     systemInit();
     
@@ -384,20 +342,16 @@ void main(void) {
         input_state = INPUT3_PIN;
         handleInput3(input_state);
         
-        // Example: Send test data to Slave 1
-        i2cSendByte(I2C_SLAVE1_ADDR, 0xAA);
+        // Example: Send test data to Slave 1 (0xAA)
+        // Replace with actual data based on inputs or logic
+        message_data = 0xAA;
+        i2cSendByte(I2C_SLAVE1_ADDR, message_data);
         delay_ms(10);
         
-        // Example: Read data from Slave 1
-        slave1_data = i2cReceiveByte(I2C_SLAVE1_ADDR);
-        delay_ms(10);
-        
-        // Example: Send test data to Slave 2
-        i2cSendByte(I2C_SLAVE2_ADDR, 0x55);
-        delay_ms(10);
-        
-        // Example: Read data from Slave 2
-        slave2_data = i2cReceiveByte(I2C_SLAVE2_ADDR);
+        // Example: Send test data to Slave 2 (0x55)
+        // Replace with actual data based on inputs or logic
+        message_data = 0x55;
+        i2cSendByte(I2C_SLAVE2_ADDR, message_data);
         delay_ms(10);
         
         // Loop delay

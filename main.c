@@ -2,6 +2,8 @@
  * PIC16F18156 I2C Host Controller (Send Only)
  * Communicates with two Arduino Nano slaves via I2C
  * 7-bit addressing, single 8-bit messages (host send only)
+ * Drives outputs based on input states
+ * Sends test messages to Nano slaves with LCD displays
  * 
  * I2C Configuration:
  * - SCL: RA0 (Clock)
@@ -13,6 +15,10 @@
  * 
  * Digital Outputs (8):
  * - RB0, RB1, RB2, RB3, RB4, RB5, RB6, RB7
+ * 
+ * Slave Devices:
+ * - Nano 0x50: Slave 1 with 2004A LCD
+ * - Nano 0x51: Slave 2 with 2004A LCD
  * 
  * Compiler: MPLAB X with XC8
  */
@@ -48,8 +54,8 @@
 // ============================================================================
 
 #define _XTAL_FREQ 8000000  // 8MHz internal oscillator
-#define I2C_SLAVE1_ADDR 0x50  // First Arduino Nano slave address (7-bit)
-#define I2C_SLAVE2_ADDR 0x51  // Second Arduino Nano slave address (7-bit)
+#define I2C_SLAVE1_ADDR 0x50  // Arduino Nano slave 1 address (7-bit)
+#define I2C_SLAVE2_ADDR 0x51  // Arduino Nano slave 2 address (7-bit)
 #define I2C_SPEED 100         // kHz
 
 // Digital Input Port Definitions
@@ -66,6 +72,15 @@
 #define OUTPUT6 RB5
 #define OUTPUT7 RB6
 #define OUTPUT8 RB7
+
+// Test Message Codes
+#define TEST_0      0x00
+#define TEST_1      0x01
+#define TEST_2      0x02
+#define TEST_3      0x03
+#define TEST_PATTERN_A  0xAA
+#define TEST_PATTERN_B  0x55
+#define TEST_ALL_ON     0xFF
 
 // ============================================================================
 // FUNCTION PROTOTYPES
@@ -84,6 +99,7 @@ void delay_ms(uint16_t ms);
 void handleInput1(uint8_t state);
 void handleInput2(uint8_t state);
 void handleInput3(uint8_t state);
+uint8_t readAllInputs(void);
 
 // Output control subroutines
 void setOutput1(uint8_t state);
@@ -95,6 +111,9 @@ void setOutput6(uint8_t state);
 void setOutput7(uint8_t state);
 void setOutput8(uint8_t state);
 void setAllOutputs(uint8_t state);
+
+// Message generation subroutines
+uint8_t generateTestMessage(uint8_t input_state);
 
 // ============================================================================
 // SYSTEM INITIALIZATION
@@ -207,7 +226,7 @@ void delay_ms(uint16_t ms) {
 }
 
 // ============================================================================
-// INPUT HANDLER SUBROUTINES (Empty - To be implemented by user)
+// INPUT HANDLER SUBROUTINES
 // ============================================================================
 
 /*
@@ -215,9 +234,16 @@ void delay_ms(uint16_t ms) {
  * state: Current state of input pin (1 = HIGH, 0 = LOW)
  */
 void handleInput1(uint8_t state) {
-    // TODO: Implement input 1 handling logic
-    // Example: Send state to slave via I2C
-    // i2cSendByte(I2C_SLAVE1_ADDR, state);
+    // Input 1 processing
+    // This routine is called when Input 1 changes
+    // User can add custom logic here
+    if (state) {
+        // Input 1 is HIGH
+        setOutput1(1);
+    } else {
+        // Input 1 is LOW
+        setOutput1(0);
+    }
 }
 
 /*
@@ -225,7 +251,15 @@ void handleInput1(uint8_t state) {
  * state: Current state of input pin (1 = HIGH, 0 = LOW)
  */
 void handleInput2(uint8_t state) {
-    // TODO: Implement input 2 handling logic
+    // Input 2 processing
+    // This routine is called when Input 2 changes
+    if (state) {
+        // Input 2 is HIGH
+        setOutput2(1);
+    } else {
+        // Input 2 is LOW
+        setOutput2(0);
+    }
 }
 
 /*
@@ -233,11 +267,34 @@ void handleInput2(uint8_t state) {
  * state: Current state of input pin (1 = HIGH, 0 = LOW)
  */
 void handleInput3(uint8_t state) {
-    // TODO: Implement input 3 handling logic
+    // Input 3 processing
+    // This routine is called when Input 3 changes
+    if (state) {
+        // Input 3 is HIGH
+        setOutput3(1);
+    } else {
+        // Input 3 is LOW
+        setOutput3(0);
+    }
+}
+
+/*
+ * Read all input states and combine into single byte
+ * Bit 0 (LSB) -> Input 1 (RA2)
+ * Bit 1 -> Input 2 (RA3)
+ * Bit 2 -> Input 3 (RA4)
+ * Bits 3-7 -> 0
+ */
+uint8_t readAllInputs(void) {
+    uint8_t input_byte = 0x00;
+    input_byte |= (INPUT1_PIN << 0);
+    input_byte |= (INPUT2_PIN << 1);
+    input_byte |= (INPUT3_PIN << 2);
+    return input_byte;
 }
 
 // ============================================================================
-// OUTPUT CONTROL SUBROUTINES (Empty - To be implemented by user)
+// OUTPUT CONTROL SUBROUTINES
 // ============================================================================
 
 /*
@@ -245,7 +302,6 @@ void handleInput3(uint8_t state) {
  * state: Output state (1 = HIGH, 0 = LOW)
  */
 void setOutput1(uint8_t state) {
-    // TODO: Implement output 1 control logic
     OUTPUT1 = state;
 }
 
@@ -254,7 +310,6 @@ void setOutput1(uint8_t state) {
  * state: Output state (1 = HIGH, 0 = LOW)
  */
 void setOutput2(uint8_t state) {
-    // TODO: Implement output 2 control logic
     OUTPUT2 = state;
 }
 
@@ -263,7 +318,6 @@ void setOutput2(uint8_t state) {
  * state: Output state (1 = HIGH, 0 = LOW)
  */
 void setOutput3(uint8_t state) {
-    // TODO: Implement output 3 control logic
     OUTPUT3 = state;
 }
 
@@ -272,7 +326,6 @@ void setOutput3(uint8_t state) {
  * state: Output state (1 = HIGH, 0 = LOW)
  */
 void setOutput4(uint8_t state) {
-    // TODO: Implement output 4 control logic
     OUTPUT4 = state;
 }
 
@@ -281,7 +334,6 @@ void setOutput4(uint8_t state) {
  * state: Output state (1 = HIGH, 0 = LOW)
  */
 void setOutput5(uint8_t state) {
-    // TODO: Implement output 5 control logic
     OUTPUT5 = state;
 }
 
@@ -290,7 +342,6 @@ void setOutput5(uint8_t state) {
  * state: Output state (1 = HIGH, 0 = LOW)
  */
 void setOutput6(uint8_t state) {
-    // TODO: Implement output 6 control logic
     OUTPUT6 = state;
 }
 
@@ -299,7 +350,6 @@ void setOutput6(uint8_t state) {
  * state: Output state (1 = HIGH, 0 = LOW)
  */
 void setOutput7(uint8_t state) {
-    // TODO: Implement output 7 control logic
     OUTPUT7 = state;
 }
 
@@ -308,7 +358,6 @@ void setOutput7(uint8_t state) {
  * state: Output state (1 = HIGH, 0 = LOW)
  */
 void setOutput8(uint8_t state) {
-    // TODO: Implement output 8 control logic
     OUTPUT8 = state;
 }
 
@@ -321,40 +370,118 @@ void setAllOutputs(uint8_t state) {
 }
 
 // ============================================================================
+// MESSAGE GENERATION SUBROUTINES
+// ============================================================================
+
+/*
+ * Generate test message based on input state
+ * input_state: 8-bit value containing all input states
+ * 
+ * Mapping:
+ * Input pattern 0x00 (all LOW) -> Test 0
+ * Input pattern 0x01 (Input1 HIGH) -> Test 1
+ * Input pattern 0x02 (Input2 HIGH) -> Test 2
+ * Input pattern 0x03 (Input1,2 HIGH) -> Test 3
+ * Input pattern 0x04 (Input3 HIGH) -> Test Pattern A (0xAA)
+ * Input pattern 0x05 (Input1,3 HIGH) -> Test Pattern B (0x55)
+ * Input pattern 0x06 (Input2,3 HIGH) -> Test All ON (0xFF)
+ * Input pattern 0x07 (all HIGH) -> Custom message
+ */
+uint8_t generateTestMessage(uint8_t input_state) {
+    uint8_t message = TEST_0;
+    
+    // Extract individual input bits
+    uint8_t input1 = (input_state >> 0) & 0x01;
+    uint8_t input2 = (input_state >> 1) & 0x01;
+    uint8_t input3 = (input_state >> 2) & 0x01;
+    
+    // Generate message based on input combination
+    if (input1 && input2 && input3) {
+        // All inputs HIGH
+        message = 0x0F;  // Custom message
+    } else if (input2 && input3) {
+        // Input 2 and 3 HIGH
+        message = TEST_ALL_ON;
+    } else if (input1 && input3) {
+        // Input 1 and 3 HIGH
+        message = TEST_PATTERN_B;
+    } else if (input3) {
+        // Only Input 3 HIGH
+        message = TEST_PATTERN_A;
+    } else if (input1 && input2) {
+        // Input 1 and 2 HIGH
+        message = TEST_3;
+    } else if (input2) {
+        // Only Input 2 HIGH
+        message = TEST_2;
+    } else if (input1) {
+        // Only Input 1 HIGH
+        message = TEST_1;
+    } else {
+        // All inputs LOW
+        message = TEST_0;
+    }
+    
+    return message;
+}
+
+// ============================================================================
 // MAIN PROGRAM
 // ============================================================================
 
 void main(void) {
     uint8_t input_state;
-    uint8_t message_data;
+    uint8_t message_data_slave1;
+    uint8_t message_data_slave2;
+    uint8_t previous_input_state = 0xFF;  // Initialize to different value
     
     systemInit();
     
+    // Display startup indication on outputs
+    setAllOutputs(1);
+    delay_ms(500);
+    setAllOutputs(0);
+    delay_ms(500);
+    
     // Main loop
     while (1) {
-        // Read digital inputs
-        input_state = INPUT1_PIN;
-        handleInput1(input_state);
+        // Read all digital inputs
+        input_state = readAllInputs();
         
-        input_state = INPUT2_PIN;
-        handleInput2(input_state);
+        // Process inputs only if they changed
+        if (input_state != previous_input_state) {
+            previous_input_state = input_state;
+            
+            // Handle individual input changes
+            handleInput1((input_state >> 0) & 0x01);
+            handleInput2((input_state >> 1) & 0x01);
+            handleInput3((input_state >> 2) & 0x01);
+            
+            // Generate test messages based on input state
+            message_data_slave1 = generateTestMessage(input_state);
+            message_data_slave2 = generateTestMessage(input_state);
+            
+            // Send test message to Slave 1 (0x50)
+            i2cSendByte(I2C_SLAVE1_ADDR, message_data_slave1);
+            delay_ms(10);
+            
+            // Send test message to Slave 2 (0x51)
+            i2cSendByte(I2C_SLAVE2_ADDR, message_data_slave2);
+            delay_ms(10);
+        }
         
-        input_state = INPUT3_PIN;
-        handleInput3(input_state);
+        // Periodic message refresh even if inputs unchanged
+        // This ensures LCDs stay synchronized
+        delay_ms(200);
         
-        // Example: Send test data to Slave 1 (0xAA)
-        // Replace with actual data based on inputs or logic
-        message_data = 0xAA;
-        i2cSendByte(I2C_SLAVE1_ADDR, message_data);
+        // Periodically resend messages to slaves
+        message_data_slave1 = generateTestMessage(input_state);
+        message_data_slave2 = generateTestMessage(input_state);
+        
+        i2cSendByte(I2C_SLAVE1_ADDR, message_data_slave1);
         delay_ms(10);
         
-        // Example: Send test data to Slave 2 (0x55)
-        // Replace with actual data based on inputs or logic
-        message_data = 0x55;
-        i2cSendByte(I2C_SLAVE2_ADDR, message_data);
+        i2cSendByte(I2C_SLAVE2_ADDR, message_data_slave2);
         delay_ms(10);
-        
-        // Loop delay
-        delay_ms(100);
     }
 }

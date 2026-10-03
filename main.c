@@ -3,7 +3,7 @@
  * Communicates with two Arduino Nano slaves via I2C
  * 7-bit addressing, single 8-bit messages (host send only)
  * Drives outputs based on input states
- * Sends test messages to Nano slaves with LCD displays
+ * Sends DIFFERENT test messages to each Nano slave with LCD displays
  * 
  * I2C Configuration:
  * - SCL: RA0 (Clock)
@@ -17,8 +17,8 @@
  * - RB0, RB1, RB2, RB3, RB4, RB5, RB6, RB7
  * 
  * Slave Devices:
- * - Nano 0x50: Slave 1 with 2004A LCD
- * - Nano 0x51: Slave 2 with 2004A LCD
+ * - Nano 0x50: Slave 1 with 2004A LCD (receives message A)
+ * - Nano 0x51: Slave 2 with 2004A LCD (receives message B)
  * 
  * Compiler: MPLAB X with XC8
  */
@@ -112,8 +112,9 @@ void setOutput7(uint8_t state);
 void setOutput8(uint8_t state);
 void setAllOutputs(uint8_t state);
 
-// Message generation subroutines
-uint8_t generateTestMessage(uint8_t input_state);
+// Message generation subroutines (separate for each slave)
+uint8_t generateTestMessageSlave1(uint8_t input_state);
+uint8_t generateTestMessageSlave2(uint8_t input_state);
 
 // ============================================================================
 // SYSTEM INITIALIZATION
@@ -236,7 +237,6 @@ void delay_ms(uint16_t ms) {
 void handleInput1(uint8_t state) {
     // Input 1 processing
     // This routine is called when Input 1 changes
-    // User can add custom logic here
     if (state) {
         // Input 1 is HIGH
         setOutput1(1);
@@ -370,24 +370,24 @@ void setAllOutputs(uint8_t state) {
 }
 
 // ============================================================================
-// MESSAGE GENERATION SUBROUTINES
+// MESSAGE GENERATION SUBROUTINES - SLAVE 1 (0x50)
 // ============================================================================
 
 /*
- * Generate test message based on input state
+ * Generate test message for Slave 1 (0x50) based on input state
  * input_state: 8-bit value containing all input states
  * 
- * Mapping:
- * Input pattern 0x00 (all LOW) -> Test 0
- * Input pattern 0x01 (Input1 HIGH) -> Test 1
- * Input pattern 0x02 (Input2 HIGH) -> Test 2
- * Input pattern 0x03 (Input1,2 HIGH) -> Test 3
+ * Slave 1 Message Mapping:
+ * Input pattern 0x00 (all LOW) -> Test 0 (0x00)
+ * Input pattern 0x01 (Input1 HIGH) -> Test 1 (0x01)
+ * Input pattern 0x02 (Input2 HIGH) -> Test 2 (0x02)
+ * Input pattern 0x03 (Input1,2 HIGH) -> Test 3 (0x03)
  * Input pattern 0x04 (Input3 HIGH) -> Test Pattern A (0xAA)
  * Input pattern 0x05 (Input1,3 HIGH) -> Test Pattern B (0x55)
  * Input pattern 0x06 (Input2,3 HIGH) -> Test All ON (0xFF)
- * Input pattern 0x07 (all HIGH) -> Custom message
+ * Input pattern 0x07 (all HIGH) -> Custom message (0x0F)
  */
-uint8_t generateTestMessage(uint8_t input_state) {
+uint8_t generateTestMessageSlave1(uint8_t input_state) {
     uint8_t message = TEST_0;
     
     // Extract individual input bits
@@ -395,7 +395,7 @@ uint8_t generateTestMessage(uint8_t input_state) {
     uint8_t input2 = (input_state >> 1) & 0x01;
     uint8_t input3 = (input_state >> 2) & 0x01;
     
-    // Generate message based on input combination
+    // Generate message based on input combination for Slave 1
     if (input1 && input2 && input3) {
         // All inputs HIGH
         message = 0x0F;  // Custom message
@@ -420,6 +420,62 @@ uint8_t generateTestMessage(uint8_t input_state) {
     } else {
         // All inputs LOW
         message = TEST_0;
+    }
+    
+    return message;
+}
+
+// ============================================================================
+// MESSAGE GENERATION SUBROUTINES - SLAVE 2 (0x51)
+// ============================================================================
+
+/*
+ * Generate test message for Slave 2 (0x51) based on input state
+ * input_state: 8-bit value containing all input states
+ * 
+ * Slave 2 Message Mapping (DIFFERENT from Slave 1):
+ * Input pattern 0x00 (all LOW) -> Test Pattern B (0x55)
+ * Input pattern 0x01 (Input1 HIGH) -> Test All ON (0xFF)
+ * Input pattern 0x02 (Input2 HIGH) -> Test Pattern A (0xAA)
+ * Input pattern 0x03 (Input1,2 HIGH) -> Test 0 (0x00)
+ * Input pattern 0x04 (Input3 HIGH) -> Test 1 (0x01)
+ * Input pattern 0x05 (Input1,3 HIGH) -> Test 2 (0x02)
+ * Input pattern 0x06 (Input2,3 HIGH) -> Test 3 (0x03)
+ * Input pattern 0x07 (all HIGH) -> Custom message (0xF0)
+ */
+uint8_t generateTestMessageSlave2(uint8_t input_state) {
+    uint8_t message = TEST_0;
+    
+    // Extract individual input bits
+    uint8_t input1 = (input_state >> 0) & 0x01;
+    uint8_t input2 = (input_state >> 1) & 0x01;
+    uint8_t input3 = (input_state >> 2) & 0x01;
+    
+    // Generate message based on input combination for Slave 2 (DIFFERENT mapping)
+    if (input1 && input2 && input3) {
+        // All inputs HIGH
+        message = 0xF0;  // Different custom message than Slave 1
+    } else if (input2 && input3) {
+        // Input 2 and 3 HIGH
+        message = TEST_3;
+    } else if (input1 && input3) {
+        // Input 1 and 3 HIGH
+        message = TEST_2;
+    } else if (input3) {
+        // Only Input 3 HIGH
+        message = TEST_1;
+    } else if (input1 && input2) {
+        // Input 1 and 2 HIGH
+        message = TEST_0;
+    } else if (input2) {
+        // Only Input 2 HIGH
+        message = TEST_PATTERN_A;
+    } else if (input1) {
+        // Only Input 1 HIGH
+        message = TEST_ALL_ON;
+    } else {
+        // All inputs LOW
+        message = TEST_PATTERN_B;
     }
     
     return message;
@@ -457,15 +513,15 @@ void main(void) {
             handleInput2((input_state >> 1) & 0x01);
             handleInput3((input_state >> 2) & 0x01);
             
-            // Generate test messages based on input state
-            message_data_slave1 = generateTestMessage(input_state);
-            message_data_slave2 = generateTestMessage(input_state);
+            // Generate DIFFERENT test messages for each slave based on input state
+            message_data_slave1 = generateTestMessageSlave1(input_state);
+            message_data_slave2 = generateTestMessageSlave2(input_state);
             
             // Send test message to Slave 1 (0x50)
             i2cSendByte(I2C_SLAVE1_ADDR, message_data_slave1);
             delay_ms(10);
             
-            // Send test message to Slave 2 (0x51)
+            // Send DIFFERENT test message to Slave 2 (0x51)
             i2cSendByte(I2C_SLAVE2_ADDR, message_data_slave2);
             delay_ms(10);
         }
@@ -474,9 +530,9 @@ void main(void) {
         // This ensures LCDs stay synchronized
         delay_ms(200);
         
-        // Periodically resend messages to slaves
-        message_data_slave1 = generateTestMessage(input_state);
-        message_data_slave2 = generateTestMessage(input_state);
+        // Periodically resend DIFFERENT messages to slaves
+        message_data_slave1 = generateTestMessageSlave1(input_state);
+        message_data_slave2 = generateTestMessageSlave2(input_state);
         
         i2cSendByte(I2C_SLAVE1_ADDR, message_data_slave1);
         delay_ms(10);
